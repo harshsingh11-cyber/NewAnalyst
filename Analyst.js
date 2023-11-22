@@ -40,7 +40,6 @@ function Analyst() {
         }
       });
 
-      // console.log(map);
       let keys;
       keys = Array.from(map.keys());
       keys.sort();
@@ -48,6 +47,7 @@ function Analyst() {
       // console.log(map);
       // console.log(keys);
 
+      let a = 1;
       let final = keys.map((elm) => {
         let obj = {};
         obj.Analyst = elm;
@@ -56,19 +56,23 @@ function Analyst() {
         obj.IntuitiveAlpha = 0;
         obj.Marketopper = 0;
         obj.PortfolioCode = 0;
+        obj.groupCode = a;
         let newObj = map.get(elm);
-        obj.subRows = newObj;
-        return obj;
+        for (let i = 0; i < newObj.length; i++) {
+          let objOne = newObj[i];
+          objOne.groupCode = a;
+        }
+        a++;
+        newObj.unshift(obj);
+        return newObj;
       });
 
+      let dataFinal = final.flat();
+      setData(dataFinal);
 
-      console.log(final);
-      // let dataFinal = final.flat();
-      setData(final);
-
-      // let newDataFinal = dataFinal.filter((elm) => elm.PortfolioCode != "0");
-      setDataT(final);
-      // console.log(dataFinal);
+      let newDataFinal = dataFinal.filter((elm) => elm.PortfolioCode != "0");
+      setDataT(newDataFinal);
+      console.log(dataFinal);
     } catch (err) {
       console.log(err);
     }
@@ -154,7 +158,7 @@ function Analyst() {
     );
 
 //console.log(rowsToToggle);
-    setVisibilityState((prevState) => ({   
+    setVisibilityState((prevState) => ({
       ...prevState,
       [GroupCode]: !prevState[GroupCode],
     }));
@@ -212,7 +216,7 @@ function Analyst() {
               </th>
             </tr>
           </thead>
-          {/* <tbody>
+          <tbody>
             {bol ? (
               <>
                 {data &&
@@ -278,7 +282,7 @@ function Analyst() {
                 })}
               </>
             )}
-          </tbody> */}
+          </tbody>
         </table>
       </div>
     </div>
