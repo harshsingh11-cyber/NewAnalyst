@@ -1,0 +1,686 @@
+import React from 'react';
+import './Header.css';
+
+function Header() {
+  return (
+    <div className='header_main'>
+        <p className='headingName'>Option Portfolio Factor</p>
+    </div>
+  )
+}
+
+export default Header
+
+
+
+
+
+-----------------------------
+
+import { useEffect, useState } from "react";
+import "./Analyst.css";
+import axios from "axios";
+
+function Analyst() {
+
+  const [data, setData] = useState([]);
+  const [dataT, setDataT] = useState([]);
+
+  const [bol, setBol] = useState(true);
+
+  const [filter, setFilter] = useState([]);
+  const [visibilityState, setVisibilityState] = useState({});
+
+  const [vis, setVis] = useState(false);
+  const [message, setMessage] = useState();
+
+  const [link, setLink] = useState(false);
+
+  const [objs, setObjS] = useState({
+    WW9: {
+      Intra: 0,
+      Carry: 0
+    },
+    WW27: {
+      Intra: 0,
+      Carry: 0
+    },
+    IT0009: {
+      Intra: 0,
+      Carry: 0
+    },
+    IT0019: {
+      Intra: 0,
+      Carry: 0
+    }
+  });
+
+  let baseUrl = "http://192.168.1.182:8574/getData";
+  let secUrl = "http://192.168.1.182:8574/getStatus";
+
+  async function fetchDataS() {
+    try {
+      const response = await axios.get(`${secUrl}`);
+      // console.log(response);
+      let arr = response.data.arr;
+      console.log(arr);
+      let m1 = 0;
+      let m2 = 0;
+
+      let a1 = 0;
+      let a2 = 0;
+
+      let e1 = 0;
+      let e2 = 0;
+
+      let i1 = 0;
+      let i2 = 0;
+      for (let i = 0; i < arr.length; i++) {
+        let obj = arr[i];
+        // console.log(obj);
+        switch (obj.ClientCode) {
+          case "WW9":
+            obj.IntraCarry === "Carry" ? m2 = obj.ExFactor : m1 = obj.ExFactor;
+            break;
+
+          case "WW27":
+            obj.IntraCarry ==="Carry" ? a2 = obj.ExFactor : a1 = obj.ExFactor;
+            break;
+
+          case "IT0009":
+            obj.IntraCarry === "Carry" ? e2 = obj.ExFactor : e1 = obj.ExFactor;
+            break;
+
+          case "IT0019":
+            obj.IntraCarry === "Carry" ? i2 = obj.ExFactor : i1 = obj.ExFactor;
+            break;
+
+            default:
+              break;
+
+        }
+      }
+
+      let obj = [
+         { Client : "WW9",
+          Intra: m1,
+          Carry: m2
+        },
+        {
+          Client : "WW27",
+          Intra: a1,
+          Carry: a2
+        },
+         {
+          Client : "IT0009",
+          Intra: e1,
+          Carry: e2
+        },
+         {
+          Client : "IT0019",
+          Intra: i1,
+          Carry: i2
+        }
+    ]
+      // console.log(obj);
+      setObjS(obj);
+      // console.log(objs);
+      // console.log("trigerd...");
+
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  async function fetchData() {
+    try {
+      const response = await axios.get(`${baseUrl}`);
+      //   console.log(response);
+      let arr = response.data.arr;
+      setMessage(response.data);
+
+      let map = new Map();
+      arr.forEach((element) => {
+        map.set(element.Analyst, []);
+      });
+
+      //console.log(map);
+      arr.forEach((elm) => {
+        if (map.has(elm.Analyst)) {
+          let oldArr = map.get(elm.Analyst);
+          map.set(elm.Analyst, [...oldArr, elm]);
+        } else {
+          map.set(elm.Analyst, [elm]);
+        }
+      });
+
+      let keys;
+      keys = Array.from(map.keys());
+      keys.sort();
+
+      // console.log(map);
+      // console.log(keys);
+
+      let a = 1;
+      let final = keys.map((elm) => {
+        let obj = {};
+        obj.Analyst = elm;
+        obj.Aprajita = 0;
+        obj.EnoraGlobal = 0;
+        obj.IntuitiveAlpha = 0;
+        obj.Marketopper = 0;
+        obj.PortfolioCode = 0;
+        obj.groupCode = a;
+        let newObj = map.get(elm);
+        for (let i = 0; i < newObj.length; i++) {
+          let objOne = newObj[i];
+          objOne.groupCode = a;
+        }
+        a++;
+        newObj.unshift(obj);
+        return newObj;
+      });
+
+      let dataFinal = final.flat();
+      setData(dataFinal);
+
+      let newDataFinal = dataFinal.filter((elm) => elm.PortfolioCode !== "0");
+      setDataT(newDataFinal);
+
+      
+
+      setVis(true);
+      // console.log(dataFinal);
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  useEffect(() => {
+    fetchDataS();
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  function handleSearch(val) {
+    if (val) {
+      let search_results = dataT
+        .filter((prof) => {
+          // Filter results by doing case insensitive match on name here
+          return prof.Analyst.toLowerCase().includes(val.toLowerCase());
+        })
+        .sort((a, b) => {
+          // Sort results by matching name with keyword position in name
+          if (
+            a.Analyst.toLowerCase().indexOf(val.toLowerCase()) >
+            b.Analyst.toLowerCase().indexOf(val.toLowerCase())
+          ) {
+            return 1;
+          } else if (
+            a.Analyst.toLowerCase().indexOf(val.toLowerCase()) <
+            b.Analyst.toLowerCase().indexOf(val.toLowerCase())
+          ) {
+            return -1;
+          } else {
+            if (a.Analyst > b.Analyst) return 1;
+            else return -1;
+          }
+        });
+      setFilter([...search_results]);
+      setBol(false);
+    } else {
+      setBol(true);
+    }
+  }
+
+  function handleSearchCode(val) {
+    if (val) {
+      let search_results = dataT
+        .filter((prof) => {
+          // Filter results by doing case insensitive match on name here
+          return prof.PortfolioCode.toLowerCase().includes(val.toLowerCase());
+        })
+        .sort((a, b) => {
+          // Sort results by matching name with keyword position in name
+          if (a.PortfolioCode !== 0 && b.PortfolioCode !== 0) {
+            if (
+              a.PortfolioCode.toLowerCase().indexOf(val.toLowerCase()) >
+              b.PortfolioCode.toLowerCase().indexOf(val.toLowerCase())
+            ) {
+              return 1;
+            } else if (
+              a.PortfolioCode.toLowerCase().indexOf(val.toLowerCase()) <
+              b.PortfolioCode.toLowerCase().indexOf(val.toLowerCase())
+            ) {
+              return -1;
+            } else {
+              if (a.PortfolioCode > b.PortfolioCode) return 1;
+              else return -1;
+            }
+          }
+        });
+      setFilter([...search_results]);
+      setBol(false);
+    } else {
+      setBol(true);
+    }
+  }
+
+  // Use to refresh the page or reload
+  function refreshPage() {
+    window.location.reload(false);
+  }
+
+  // handle to visibility of content
+  const handleRowVisibility = (GroupCode) => {
+    const rowsToToggle = document.querySelectorAll(
+      `tr[data-GroupCode="${GroupCode}"]:not(.group-visible)`
+    );
+
+    //console.log(rowsToToggle);
+    setVisibilityState((prevState) => ({
+      ...prevState,
+      [GroupCode]: !prevState[GroupCode],
+    }));
+
+    rowsToToggle.forEach((toggleRow) => {
+      toggleRow.style.display = visibilityState[GroupCode]
+        ? "none"
+        : "table-row";
+    });
+  };
+
+  return (
+    <>
+      {vis ? (
+        <div className="analist_main">
+          <div className="search_main">
+            <div className="search_Name">
+              <label for="search"> Search by Name </label>{" "}
+              <input
+                id="search"
+                onChange={(e) => handleSearch(e.target.value)}
+              />
+              <label for="search-1" className="lab">
+                {" "}
+                Search by Code{" "}
+              </label>{" "}
+              <input
+                id="search-1"
+                onChange={(e) => handleSearchCode(e.target.value)}
+              />{" "}
+            </div>
+            <div className="button_hold">
+              <p className="btn" onClick={() => setLink(!link)}>
+                RMS_Factor
+              </p>{" "}
+              <p className="btn" onClick={refreshPage}>
+                {" "}
+                Reload{" "}
+              </p>{" "}
+            </div>
+          </div>
+          <div className="head_main_table">
+            <table class="table table-bordered">
+              <thead>
+                <tr>
+                  <th scope="col" id="ana2">
+                    {" "}
+                    Analyst / PortfolioCode{" "}
+                  </th>
+                  <th scope="col" id="ana1">
+                    {" "}
+                    Marketopper{" "}
+                  </th>
+                  <th scope="col" id="ana1">
+                    {" "}
+                    Aprajita{" "}
+                  </th>
+                  <th scope="col" id="ana1">
+                    {" "}
+                    Fund{" "}
+                  </th>
+                  <th scope="col" id="ana1">
+                    {" "}
+                    IAlpha{" "}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {bol ? (
+                  <>
+                    {data &&
+                      data.map((elm, index) => {
+                        const idName =
+                          elm.PortfolioCode === 0 ? "distinctColor" : "";
+                        const isGroupVisible =
+                          elm.groupCode == null || elm.PortfolioCode === 0;
+                        const groupClass = isGroupVisible
+                          ? "group-visible"
+                          : "group-hidden";
+                        if (isGroupVisible) {
+                          return (
+                            <tr
+                              id={idName}
+                              className={groupClass}
+                              data-GroupCode={elm.groupCode}
+                              onClick={() => {
+                                handleRowVisibility(elm.groupCode);
+                              }}
+                            >
+                              <td> {elm.Analyst} </td>
+                              <td> {elm.Marketopper} </td>
+                              <td> {elm.Aprajita} </td>
+                              <td> {elm.EnoraGlobal} </td>
+                              <td> {elm.IntuitiveAlpha} </td>
+                            </tr>
+                          );
+                        } else {
+                          return (
+                            <tr
+                              className={groupClass}
+                              data-GroupCode={elm.groupCode}
+                              onClick={() => handleRowVisibility(elm.groupCode)}
+                            >
+                              <td> {elm.PortfolioCode} </td>
+                              <td> {elm.Marketopper} </td>
+                              <td> {elm.Aprajita} </td>
+                              <td> {elm.EnoraGlobal} </td>
+                              <td> {elm.IntuitiveAlpha} </td>
+                            </tr>
+                          );
+                        }
+                      })}
+                  </>
+                ) : (
+                  <>
+                    {filter.map((elm) => {
+                      return (
+                        <tr>
+                          <td>
+                            {" "}
+                            {elm.PortfolioCode + " "}{" "}
+                            <span id="analystName">
+                              {" "}
+                              {"( " + elm.Analyst + " )"}{" "}
+                            </span>
+                          </td>
+                          <td> {elm.Marketopper} </td>
+                          <td> {elm.Aprajita} </td>
+                          <td> {elm.EnoraGlobal} </td>
+                          <td> {elm.IntuitiveAlpha} </td>
+                        </tr>
+                      );
+                    })}
+                  </>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <>
+            {link ? (
+              <div className="popup">
+                <table className="intratable">
+                  <thead>
+                    <tr>
+                      {" "}
+                      <th> Client </th> <th>Carry</th><th>Intra</th> 
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {
+                      objs.map((elm) => {
+                        if(elm.Intra === 0 && elm.Carry === 0){
+
+                        }else{
+                          return(
+                            <tr>
+                            <td>{elm.Client}</td>
+                            <td>{elm.Carry}</td>
+                            <td>{elm.Intra} </td>
+                            
+                          </tr>
+                          )
+                        }
+                      })
+                    }
+                   
+                  </tbody>
+                </table>
+
+                <button className="closebtn" onClick={() => setLink(!link)}>
+                  {" "}
+                  close
+                </button>
+              </div>
+            ) : (
+              ""
+            )}
+          </>
+        </div>
+      ) : (
+        <>
+          <div className="errorM">
+            <h6> {message}</h6>
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+export default Analyst;
+
+
+
+.head_main_table {
+ width: 100%;
+ height: 600px;
+}
+
+@import url("https://fonts.googleapis.com/css2?family=Roboto+Slab&display=swap");
+
+* {
+  background-color: #151b33;
+  color: #fff;
+  /* font-family: "Roboto Slab", serif; */
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+body {
+  background-color: #151b33;
+}
+.analist_main {
+  padding: 0px 30px;
+}
+#search {
+  margin-left: 15px;
+  outline: none;
+  border: none;
+  border-bottom: 1px solid white;
+}
+#search-1 {
+  margin-left: 15px;
+
+  outline: none;
+  border: none;
+  border-bottom: 1px solid white;
+}
+table th,
+table td {
+  z-index: 100;
+  border: 1px solid rgb(77, 60, 60) !important;
+}
+label {
+  color: #ffc107;
+    position: relative;
+    top: 7px;
+}
+.lab {
+  margin-left: 25px;
+}
+th {
+  background-color: rgba(22, 21, 21, 0.959);
+  font-weight: 400 !important;
+  letter-spacing: 1px;
+}
+table td{
+    font-weight: 350 !important;
+}
+
+#ana1 {
+  min-width: 130px !important;
+}
+#ana2 {
+  min-width: 230px !important;
+}
+
+.button_hold {
+  display: flex;
+}
+
+.header {
+  height: 100px;
+  background-color: aqua;
+  margin-bottom: 25px;
+}
+
+table tr th:first-child {
+  z-index: 11;
+}
+table tr th {
+  position: sticky;
+  top: 0;
+  z-index: 9;
+}
+.search_main {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 10px;
+  margin-top: 25px;
+}
+.button_hold {
+  width: 200px;
+  display: flex;
+}
+
+
+.headingName{
+  font-size: 25px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-weight: 400 !important;
+  background-color: rgba(22, 21, 21, 0.959);
+}
+.hidden td {
+  display: none;
+}
+.group-visible > tr:hover {
+  opacity: 85%;
+}
+p {
+  margin: 0%;
+  color: #ffc107;
+}
+
+.hidden {
+  display: none;
+}
+
+.clickable-row {
+  cursor: pointer;
+}
+
+.group-visible {
+  display: table-row;
+}
+
+.group-hidden {
+  display: none;
+}
+
+.nav1 {
+  font-size: 25px;
+}
+
+.Exp_viewer {
+  font-size: 20px;
+}
+
+#analystName {
+
+  font-size: 12px;
+  font-weight: 200 !important;
+  letter-spacing: 0.5px;
+}
+.group-hidden td{
+  background-color: #2b3147;
+
+}
+.errorM {
+  width: 100%;
+  height: 80vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.popup {
+  width: 300px;
+  height: 250px;
+  padding: 20px;
+  /* background-color: #FFC107; */
+  position: absolute;
+  left: 40%;
+  top: 35%;
+  z-index: 100;
+  border: 1px solid white;
+  border-radius: 15px;
+}
+.onepop {
+  padding: 0px 10px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.intratable {
+  width: 100%;
+  height: 80%;
+  text-align: center;
+}
+
+.intratable td {
+  padding: 3px;
+}
+.closebtn {
+  width: 80px;
+  position: relative;
+  top: 15px;
+  right: -70%;
+  border-radius: 25px;
+  border: 1px solid white;
+  font-size: 13px;
+  background-color: rgb(134, 33, 33);
+}
+
+
+.header_main {
+    width: 100%;
+    height: 100px;
+    padding: 0px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background-color: rgba(22, 21, 21, 0.959);
+    font-weight: 500 !important;             
+    border-bottom: 2px solid white;
+    
+
+}
+
+h2{
+    background-color: transparent;
+    color: aliceblue;
+}
